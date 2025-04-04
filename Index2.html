@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Jogo Nave Espacial</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+    }
+    canvas {
+      display: block;
+    }
+    #score, #lives, #gameOver {
+      position: absolute;
+      color: white;
+      font-family: sans-serif;
+      font-size: 20px;
+      z-index: 10;
+    }
+    #score {
+      top: 10px;
+      left: 10px;
+    }
+    #lives {
+      top: 10px;
+      right: 10px;
+    }
+    #gameOver {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 40px;
+      display: none;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="score">Pontos: 0</div>
+  <div id="lives">Vidas: 3</div>
+  <div id="gameOver">
+    💥 GAME OVER 💥<br><br>
+    Pressione ENTER para jogar novamente
+  </div>
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let ship, keys, asteroids, score, lives, isGameOver, explosions;
+
+    function resetGame() {
+      ship = {
+        x: canvas.width / 2,
+        y: canvas.height - 60,
+        width: 40,
+        height: 40,
+        speed: 6,
+        bullets: []
+      };
+      keys = {};
+      asteroids = [];
+      explosions = [];
+      score = 0;
+      lives = 3;
+      isGameOver = false;
+      document.getElementById("score").textContent = "Pontos: 0";
+      document.getElementById("lives").textContent = "Vidas: 3";
+      document.getElementById("gameOver").style.display = "none";
+    }
+
+    function createAsteroid() {
+      if (!isGameOver) {
+        asteroids.push({
+          x: Math.random() * canvas.width,
+          y: -20,
+          radius: 20 + Math.random() * 20,
+          speed: 1 + Math.random() * 3
+        });
+      }
+    }
+
+    function drawShip() {
+      ctx.fillStyle = "white";
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y);
+      ctx.lineTo(ship.x - ship.width / 2, ship.y + ship.height);
+      ctx.lineTo(ship.x + ship.width / 2, ship.y + ship.height);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawBullets() {
+      ctx.fillStyle = "red";
+      ship.bullets.forEach((b, i) => {
+        b.y -= 7;
+        ctx.fillRect(b.x, b.y, 4, 10);
+        if (b.y < 0) ship.bullets.splice(i, 1);
+      });
+    }
+
+    function drawAsteroids() {
+      ctx.fillStyle = "gray";
+      asteroids.forEach((a, ai) => {
+        a.y += a.speed;
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Colisão com nave
+        const dx = a.x - ship.x;
+        const dy = a.y - ship.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < a.radius + 20) {
+          explosions.push({ x: ship.x, y: ship.y, radius: 10 });
+          asteroids.splice(ai, 1);
+          lives--;
+          document.getElementById("lives").textContent = "Vidas: " + lives;
+          if (lives <= 0) gameOver();
+        }
+
+        // Colisão com balas
+        ship.bullets.forEach((b, bi) => {
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < a.radius) {
+            explosions.push({ x: a.x, y: a.y, radius: 10 });
+            asteroids.splice(ai, 1);
+            ship.bullets.splice(bi, 1);
+            score += 10;
+            document.getElementById("score").textContent = "Pontos: " + score;
+          }
+        });
+
+        if (a.y > canvas.height) asteroids.splice(ai, 1);
+      });
+    }
+
+    function drawExplosions() {
+      explosions.forEach((e, ei) => {
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "orange";
+        ctx.fill();
+        e.radius += 3;
+        if (e.radius > 30) explosions.splice(ei, 1);
+      });
+    }
+
+    function update() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!isGameOver) {
+        if (keys["ArrowLeft"] && ship.x > ship.width / 2) ship.x -= ship.speed;
+        if (keys["ArrowRight"] && ship.x < canvas.width - ship.width / 2) ship.x += ship.speed;
+        drawShip();
+        drawBullets();
+        drawAsteroids();
+        drawExplosions();
+      }
+
+      requestAnimationFrame(update);
+    }
+
+    function gameOver() {
+      isGameOver = true;
+      document.getElementById("gameOver").style.display = "block";
+    }
+
+    document.addEventListener("keydown", e => {
+      keys[e.key] = true;
+
+      if (e.key === " " && !isGameOver) {
+        ship.bullets.push({ x: ship.x, y: ship.y });
+      }
+
+      if (e.key === "Enter" && isGameOver) {
+        resetGame();
+      }
+    });
+
+    document.addEventListener("keyup", e => keys[e.key] = false);
+
+    // Inicialização
+    resetGame();
+    setInterval(createAsteroid, 800);
+    update();
+  </script>
+</body>
+</html>
