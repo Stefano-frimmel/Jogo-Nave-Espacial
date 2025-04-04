@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>Jogo Nave Espacial</title>
+    <style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: black;
+    }
+    canvas {
+        display: block;
+    }
+    #score {
+        position: absolute;
+        color: white;
+        top: 10px;
+        left: 10px;
+        font-size: 20px;
+        font-family: sans-serif;
+    }
+    </style>
+</head>
+<body>
+    <div id="score">Pontos: 0</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const ship = {
+        x: canvas.width / 2,
+        y: canvas.height - 60,
+        width: 40,
+        height: 40,
+        speed: 5,
+        bullets: [],
+        };
+
+    const keys = {};
+    let score = 0;
+
+    const asteroids = [];
+
+    function createAsteroid() {
+        asteroids.push({
+          x: Math.random() * canvas.width,
+        y: -20,
+          radius: 20 + Math.random() * 20,
+          speed: 1 + Math.random() * 3,
+        });
+    }
+
+    function drawShip() {
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.moveTo(ship.x, ship.y);
+        ctx.lineTo(ship.x - ship.width / 2, ship.y + ship.height);
+        ctx.lineTo(ship.x + ship.width / 2, ship.y + ship.height);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function drawBullets() {
+        ctx.fillStyle = "red";
+        ship.bullets.forEach((b, i) => {
+        b.y -= 7;
+        ctx.fillRect(b.x, b.y, 4, 10);
+        if (b.y < 0) ship.bullets.splice(i, 1);
+        });
+    }
+
+    function drawAsteroids() {
+        ctx.fillStyle = "gray";
+        asteroids.forEach((a, ai) => {
+        a.y += a.speed;
+        ctx.beginPath();
+          ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+          // Remove se sair da tela
+        if (a.y > canvas.height) asteroids.splice(ai, 1);
+
+          // Colisão com balas
+        ship.bullets.forEach((b, bi) => {
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < a.radius) {
+            asteroids.splice(ai, 1);
+            ship.bullets.splice(bi, 1);
+            score += 10;
+            document.getElementById("score").textContent = "Pontos: " + score;
+            }
+        });
+        });
+    }
+
+    function update() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (keys["ArrowLeft"] && ship.x > ship.width / 2) ship.x -= ship.speed;
+        if (keys["ArrowRight"] && ship.x < canvas.width - ship.width / 2)
+        ship.x += ship.speed;
+
+        drawShip();
+        drawBullets();
+        drawAsteroids();
+
+        requestAnimationFrame(update);
+    }
+
+    document.addEventListener("keydown", (e) => {
+        keys[e.key] = true;
+        if (e.key === " ") {
+        ship.bullets.push({ x: ship.x, y: ship.y });
+        }
+});
+
+    document.addEventListener("keyup", (e) => (keys[e.key] = false));
+
+    setInterval(createAsteroid, 1000);
+    update();
+    </script>
+</body>
+</html>
